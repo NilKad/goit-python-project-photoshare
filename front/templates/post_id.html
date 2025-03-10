@@ -1,0 +1,229 @@
+{% extends 'base.html' %}
+
+{% block styles_page %}
+  <link rel="stylesheet" href="/static/css/partials/post_id.css" />
+  <link rel="stylesheet" href="/static/css/partials/post_detail_add_comments.css" />
+{% endblock %}
+{% block content %}
+  <main>
+    <section>
+      <div class="container-xxl">
+        <div class="container-xxl mt-5">
+          {% include 'partials/post_service_btn.html' %}
+          {% if user.id == post.user_id %}
+
+          {% endif %}
+          {# <h1>Post detail</h1> #}
+          {% if message %}
+            <div class="messages my-4">
+              <span class="text-primary">{{ message.detail }}</span>
+            </div>
+          {% endif %}
+          {% if post %}
+            {% include 'partials/post_detail.html' %}
+            {% include 'partials/post_detail_add_comments.html' %}
+            {% include 'partials/post_detail_comments.html' %}
+            {% include 'partials/post_create_form.html' %}
+          {% endif %}
+        </div>
+      </div>
+    </section>
+    <script>
+      //let api_login = "{{ url_for('auth_signin') }}"
+    </script>
+  </main>
+  <script>
+    //let isPost =  {% if post %} true {% else %} false {% endif %} ||  false
+    //console.log('isPost: ', isPost)
+    let postUserId = Number('{{ post.user_id }}')
+    let editBtnRef = document.querySelector('#btn-edit-post')
+    console.log('postUserId: ', postUserId, typeof postUserId)
+    
+    const postDetailsRef = document.querySelector('#post-details')
+    const postCommentsRef = document.querySelector('.comments-section')
+    const postFormWrapRef = document.querySelector('#post-form-wrapper')
+    const postNewCommentsRef = document.querySelector('.post-new-comments')
+    
+    userId = Number(localStorage.getItem('user_id'))
+    
+    if (userId === postUserId) {
+      console.log('equal')
+      editBtnRef.removeAttribute('hidden')
+    }
+    
+    console.log(editBtnRef)
+    
+    function editTogglePage(e) {
+      console.log(postFormWrapRef)
+      if (postFormWrapRef.hasAttribute('hidden')) {
+        postFormWrapRef.removeAttribute('hidden')
+        editBtnRef.textContent = 'Cancel'
+        postDetailsRef.setAttribute('hidden', true)
+        postCommentsRef.setAttribute('hidden', true)
+        postNewCommentsRef.setAttribute('hidden', true)
+      } else {
+        editBtnRef.textContent = 'Edit'
+        postFormWrapRef.setAttribute('hidden', true)
+        postDetailsRef.removeAttribute('hidden')
+        postCommentsRef.removeAttribute('hidden')
+        postNewCommentsRef.removeAttribute('hidden')
+      }
+    }
+    
+    editBtnRef.addEventListener('click', editTogglePage)
+  </script>
+  <script>
+    const toggleFormButton = document.getElementById('toggle-form')
+    const commentFormRef = document.getElementById('comment-form')
+    const addCommentBtnRef = document.getElementById('comment-add-btn')
+    
+    toggleFormButton.addEventListener('click', function () {
+      commentFormRef.classList.toggle('hidden')
+      postNewCommentsRef.classList.toggle('shadow-lg')
+    })
+    
+    async function addCommentHandler(e) {
+      e.preventDefault()
+      console.log('!!!!! addCommentHandler: ')
+      const postId = Number(commentFormRef.getAttribute('data-post-id'))
+      const url_path = `/posts/${postId}/comments`
+      headers = getBaseHeaders()
+      console.log(`headers Authorization: `, headers.get('Authorization'))
+      console.log('headers: ', headers)
+      form_data = new FormData(e.target)
+      console.log('e.target: ', e.target)
+      const api_url = e.target.getAttribute('data-url-add')
+    
+      try {
+        response = await fetch(api_url, { method: 'POST', body: form_data, headers: headers })
+        if (!response.ok) {
+          console.log('Error create comment', response.textContent)
+        } else {
+          const currentUrl = window.location.href
+          loadProtectedPage(currentUrl)
+        }
+      } catch (error) {
+        console.log(error)
+      }
+    }
+  </script>
+
+  <script>
+    //script for add/edit post
+    const postId = Number({{post.id}})
+    //const formRef = document.querySelector('#form-post');
+    //console.log("formRef: ", formRef)
+
+    //document.querySelector('form').onsubmit = async e => {
+    async function formCreatePostHandler(e) {
+      e.preventDefault();
+      console.log("!!!!!! ")
+      console.log("e: ",e)
+      let redirect_url = "{{ url_for('home_page')}}"
+
+        
+        const token = await localStorage.getItem('access_token');
+        if (token) {
+          const headers = new Headers();
+          headers.append('Authorization', `Bearer ${token}`);
+          const formData = new FormData(e.target);
+          for (let [name, value] of formData.entries()) {
+              console.log(`${name}: ${value}`);
+          }
+
+          let to_path = ""
+          let method_rest = "" 
+          if (e.target.hasAttribute('edit')) {
+            to_path = `/posts/${postId}`
+            console.log("to_path: ", to_path)
+            method_rest = "PUT"
+          }else{
+            to_path = "/post"
+            console.log("to_path: ", to_path)
+            method_rest = "POST"
+          }
+
+          try {
+              const res = await fetch(to_path, {
+                  method: method_rest,
+                  body: formData,
+                  headers: headers
+              });
+              const response_json = await res.json()
+              if (res.ok) {
+                  console.log("OK")
+                  console.log("redirect_url: ", redirect_url)
+                  red_url = redirect_url + "posts/" + response_json.id
+                  console.log("red_url=", red_url)
+                  window.location.href = red_url;
+              }
+              else {
+                  console.log("Error")
+                  console.log(res)
+                  formMessagesRef.textContent = res.status + ": " + res.statusText
+              }
+
+
+            }
+            catch (error) {
+                console.log(error)
+            }
+
+        }
+    }
+   
+  </script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const transformBtn = document.getElementById('transform-btn');
+      const hiddenButtons = document.getElementById('hidden-buttons');
+      const mainImgRef = document.querySelector(".main-img");
+      const transformImgReg = document.querySelector(".transform-img");
+      const qrBtnRef = document.querySelector("#qrcode-btn");
+      const qrImgRef= document.querySelector(".qrcode-img");
+      const qrImgUrlRef= document.querySelector(".qrcode-img img");
+      const photoContainerRef = document.querySelector(".photo-container");
+
+
+      transformBtn.addEventListener('click', function() {
+          console.log('transformBtn clicked');
+          //hiddenButtons.style.display = hiddenButtons.style.display === 'none' ? 'block' : 'none';
+          hiddenButtons.classList.toggle('hidden');
+          mainImgRef.classList.toggle('active');
+          transformImgReg.classList.toggle('active');
+
+      });
+
+      qrBtnRef.addEventListener('click', function() {
+        //const currentUrl = window.location.href;
+        //const url = new URL(currentUrl);
+        //let baseUrl = url.protocol + '//' + url.host;
+     
+        //const url_current = document.querySelector(".photo-container .img-prev.active img").src
+        
+        //const url_current = photoContainerRef.querySelector(".img-prev.active").src
+        //const bs  = getBaseNetloc()
+        //const new_qrcode = `${bs}/api/generate_qr/?url=${url=url_current}` 
+        //const new_qrcode = `${baseUrl}/api/generate_qr/?url=${url=url_current}` 
+        //qrImgUrlRef.src = new_qrcode
+        qrImgRef.classList.toggle('active');
+
+      });
+
+      document.getElementById('sepia-btn').addEventListener('click', function() {
+          alert('Sepia effect applied!');
+          // Add your sepia effect logic here
+      });
+
+      document.getElementById('greyscale-btn').addEventListener('click', function() {
+          alert('Greyscale effect applied!');
+          // Add your greyscale effect logic here
+      });
+  });
+  </script>
+{% endblock %}
+
+{% block scripts %}
+
+{% endblock %}
